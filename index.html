@@ -143,6 +143,7 @@
     const rankingBox = document.getElementById('rankingBox');
     const rankingList = document.getElementById('rankingList');
     const attemptsInfoEnd = document.getElementById('attemptsInfoEnd');
+    const restartButton = document.getElementById('restartButton');
     const playerName = document.getElementById('playerName');
     const saveScoreButton = document.getElementById('saveScoreButton');
     const debugBox = document.getElementById('debugBox');
@@ -332,6 +333,11 @@
         startButton.textContent = remaining > 0 ? 'Empezar' : 'Límite diario alcanzado';
         startButton.style.opacity = remaining > 0 ? '1' : '.55';
         startButton.style.cursor = remaining > 0 ? 'pointer' : 'not-allowed';
+      }
+
+      if(restartButton){
+        restartButton.textContent = remaining > 0 ? 'Jugar otra vez' : 'Límite diario alcanzado';
+        restartButton.style.opacity = remaining > 0 ? '1' : '.55';
       }
     }
 
