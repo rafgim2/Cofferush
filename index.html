@@ -122,6 +122,7 @@
         <p id="finalRank" class="small">Ranking diario</p>
         <div id="rankingList" class="rankingList"></div>
         <button id="restartButton">Jugar otra vez</button>
+        <p id="attemptsInfoEnd" class="small"></p>
       </div>
     </div>
   </div>
@@ -141,6 +142,7 @@
     const nameBox = document.getElementById('nameBox');
     const rankingBox = document.getElementById('rankingBox');
     const rankingList = document.getElementById('rankingList');
+    const attemptsInfoEnd = document.getElementById('attemptsInfoEnd');
     const playerName = document.getElementById('playerName');
     const saveScoreButton = document.getElementById('saveScoreButton');
     const debugBox = document.getElementById('debugBox');
@@ -315,6 +317,12 @@
 
       if(attemptsInfo){
         attemptsInfo.textContent = remaining > 0
+          ? 'Te quedan ' + remaining + ' partida' + (remaining === 1 ? '' : 's') + ' hoy.'
+          : 'Ya has tenido suficiente café por hoy ☕😏';
+      }
+
+      if(attemptsInfoEnd){
+        attemptsInfoEnd.textContent = remaining > 0
           ? 'Te quedan ' + remaining + ' partida' + (remaining === 1 ? '' : 's') + ' hoy.'
           : 'Ya has tenido suficiente café por hoy ☕😏';
       }
@@ -622,7 +630,16 @@
     window.addEventListener('focus', updateAttemptsUI);
     canvas.addEventListener('pointerdown', handlePointerDown, { passive:false });
     document.getElementById('startButton').addEventListener('click', startGame);
-    document.getElementById('restartButton').addEventListener('click', startGame);
+    document.getElementById('restartButton').addEventListener('click', ()=>{
+      if(!canPlayToday()){
+        endOverlay.style.display='none';
+        startOverlay.style.display='grid';
+        updateAttemptsUI();
+        playFail();
+        return;
+      }
+      startGame();
+    });
     saveScoreButton.addEventListener('click', saveScoreToFirebase);
     playerName.addEventListener('keydown', e => { if(e.key === 'Enter') saveScoreToFirebase(); });
     updateAttemptsUI(); resize(); drawBackground();
