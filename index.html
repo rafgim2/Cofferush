@@ -266,7 +266,7 @@
       if(!bgMusic) return;
 
       try{
-        bgMusic.volume = 0.25;
+        bgMusic.volume = 0.12;
         bgMusic.muted = false;
         bgMusic.currentTime = 0;
 
@@ -285,8 +285,8 @@
     function duckMusic(){
       if(!bgMusic) return;
       const original = bgMusic.volume;
-      bgMusic.volume = 0.1;
-      setTimeout(()=>{ bgMusic.volume = original; }, 120);
+      bgMusic.volume = 0.02;
+      setTimeout(()=>{ bgMusic.volume = original; }, 260);
     }
 
     function stopMusic(){
