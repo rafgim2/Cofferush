@@ -88,7 +88,7 @@
 <body>
   <div id="orientationBlocker">📱 Solo disponible en vertical</div>
   <canvas id="gameCanvas"></canvas>
-  <audio id="bgMusic" src="cofferush.mp3" preload="auto"></audio>
+  <audio id="bgMusic" src="cofferush.mp3" preload="auto" playsinline></audio>
   <div class="hud">
     <div class="panel" id="targetText">COLOR</div>
     <div class="panel" id="scoreText">0.00 pts</div>
@@ -143,6 +143,12 @@
     const debugBox = document.getElementById('debugBox');
     const flash = document.getElementById('flash');
     const bgMusic = document.getElementById('bgMusic');
+
+    if (bgMusic) {
+      bgMusic.addEventListener('error', () => {
+        console.warn('Error cargando cofferush.mp3. Debe estar en la misma carpeta que el HTML.');
+      });
+    }
 
     const GAME_SECONDS = 30;
     const MIN_VALID_BALLS = 3;
@@ -507,8 +513,8 @@
 
     window.addEventListener('resize', resize);
     canvas.addEventListener('pointerdown', handlePointerDown, { passive:false });
-    document.getElementById('startButton').addEventListener('click', startGame);
-    document.getElementById('restartButton').addEventListener('click', startGame);
+    document.getElementById('startButton').addEventListener('pointerdown', startGame, { once: false });
+    document.getElementById('restartButton').addEventListener('pointerdown', startGame, { once: false });
     saveScoreButton.addEventListener('click', saveScoreToFirebase);
     playerName.addEventListener('keydown', e => { if(e.key === 'Enter') saveScoreToFirebase(); });
     resize(); drawBackground();
