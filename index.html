@@ -262,8 +262,7 @@
     }
 
     function startGame(){
-      initAudio();
-      startMusic(); startOverlay.style.display='none'; endOverlay.style.display='none';
+      initAudio(); startOverlay.style.display='none'; endOverlay.style.display='none';
       score=0; combo=0; running=true; startTime=performance.now(); lastTime=performance.now();
       resize(); createBalls(); changeTarget(); updateHud();
       cancelAnimationFrame(animationId); animationId=requestAnimationFrame(loop);
