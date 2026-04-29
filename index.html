@@ -273,7 +273,7 @@
       balls = [];
       const count = Math.max(8, Math.min(13, Math.floor(width * height / 56000)));
       for(let i=0;i<count;i++){
-        const r = random(28,46), speed = random(38,72), angle = random(0,Math.PI*2);
+        const r = random(28,46), speed = random(50,90), angle = random(0,Math.PI*2);
         balls.push({ x:random(r,width-r), y:random(110+r,height-r), r, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, color:pick(COLORS), pulse:random(0,Math.PI*2), mass:r*r });
       }
       separateOverlaps();
@@ -666,7 +666,7 @@
       grad.addColorStop(0,'#4a2b18'); grad.addColorStop(1,'#120805'); ctx.fillStyle=grad; ctx.fillRect(0,0,width,height);
     }
     function updateBalls(dt){
-      const elapsed=(performance.now()-startTime)/1000, difficulty=1;
+      const elapsed=(performance.now()-startTime)/1000, difficulty=1+elapsed/GAME_SECONDS*0.10;
       for(const b of balls){
         b.x+=b.vx*dt*difficulty; b.y+=b.vy*dt*difficulty; b.pulse+=dt*5;
         if(b.x-b.r<0){ b.x=b.r; b.vx=Math.abs(b.vx); }
@@ -718,7 +718,7 @@
       updateHud();
     }
     function respawnBall(b){
-      const r=random(28,46), speed=random(42,78), angle=random(0,Math.PI*2);
+      const r=random(28,46), speed=random(55,95), angle=random(0,Math.PI*2);
       b.r=r; b.mass=r*r; b.x=random(r,width-r); b.y=random(110+r,height-r); b.vx=Math.cos(angle)*speed; b.vy=Math.sin(angle)*speed; b.color=pick(COLORS); b.pulse=random(0,Math.PI*2); separateOverlaps();
     }
 
