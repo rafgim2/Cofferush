@@ -102,6 +102,7 @@
       <p>Ojo: a veces será <b>NO toques</b>, y el texto saldrá en color engañoso.</p>
       <p>Centro perfecto = 1.00 punto.</p>
       <button id="startButton">Empezar</button>
+      <p id="attemptsInfo" class="small">3 intentos al día.</p>
       <p class="small">30 segundos. Juega mientras se prepara el café. 3 intentos al día. Ranking diario.</p>
     </div>
   </div>
@@ -132,6 +133,8 @@
     const scoreText = document.getElementById('scoreText');
     const timeText = document.getElementById('timeText');
     const startOverlay = document.getElementById('startOverlay');
+    const startButton = document.getElementById('startButton');
+    const attemptsInfo = document.getElementById('attemptsInfo');
     const endOverlay = document.getElementById('endOverlay');
     const finalScore = document.getElementById('finalScore');
     const finalRank = document.getElementById('finalRank');
@@ -269,6 +272,62 @@
     }
 
 
+
+    const MAX_DAILY_GAMES = 3;
+    const ATTEMPTS_KEY = 'coffeeRushDailyAttempts';
+
+    function getDailyAttemptsData(){
+      const today = getTodayKey();
+      let data = null;
+
+      try{
+        data = JSON.parse(localStorage.getItem(ATTEMPTS_KEY) || 'null');
+      }catch(e){
+        data = null;
+      }
+
+      if(!data || data.day !== today){
+        data = { day: today, count: 0 };
+        localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(data));
+      }
+
+      return data;
+    }
+
+    function getGamesPlayedToday(){
+      return getDailyAttemptsData().count || 0;
+    }
+
+    function canPlayToday(){
+      return getGamesPlayedToday() < MAX_DAILY_GAMES;
+    }
+
+    function registerGamePlayed(){
+      const data = getDailyAttemptsData();
+      data.count = Math.min(MAX_DAILY_GAMES, (data.count || 0) + 1);
+      localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(data));
+      updateAttemptsUI();
+    }
+
+    function updateAttemptsUI(){
+      const played = getGamesPlayedToday();
+      const remaining = Math.max(0, MAX_DAILY_GAMES - played);
+
+      if(attemptsInfo){
+        attemptsInfo.textContent = remaining > 0
+          ? 'Te quedan ' + remaining + ' partida' + (remaining === 1 ? '' : 's') + ' hoy.'
+          : 'Ya has tenido suficiente café por hoy ☕😏';
+      }
+
+      if(startButton){
+        startButton.disabled = remaining <= 0;
+        startButton.textContent = remaining > 0 ? 'Empezar' : 'Límite diario alcanzado';
+        startButton.style.opacity = remaining > 0 ? '1' : '.55';
+        startButton.style.cursor = remaining > 0 ? 'pointer' : 'not-allowed';
+      }
+    }
+
+
     function startMusic(){
       if(!bgMusic) return;
 
@@ -300,6 +359,14 @@
     }
 
     function startGame(){
+      if(!canPlayToday()){
+        updateAttemptsUI();
+        playFail();
+        vibrate([40,40,40]);
+        return;
+      }
+
+      registerGamePlayed();
       startMusic();
       initAudio(); startOverlay.style.display='none'; endOverlay.style.display='none';
       score=0; combo=0; running=true; startTime=performance.now(); lastTime=performance.now();
@@ -552,12 +619,13 @@
     }
 
     window.addEventListener('resize', resize);
+    window.addEventListener('focus', updateAttemptsUI);
     canvas.addEventListener('pointerdown', handlePointerDown, { passive:false });
     document.getElementById('startButton').addEventListener('click', startGame);
     document.getElementById('restartButton').addEventListener('click', startGame);
     saveScoreButton.addEventListener('click', saveScoreToFirebase);
     playerName.addEventListener('keydown', e => { if(e.key === 'Enter') saveScoreToFirebase(); });
-    resize(); drawBackground();
+    updateAttemptsUI(); resize(); drawBackground();
   </script>
 </body>
 </html>
