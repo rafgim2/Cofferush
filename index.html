@@ -183,7 +183,14 @@
     function playSuccess(precision){ const base = 520 + precision*360; playTone(base,.09,'sine',.075); setTimeout(()=>playTone(base*1.5,.08,'triangle',.055),55); }
     function playFail(){ playTone(150,.16,'sawtooth',.065); setTimeout(()=>playTone(105,.15,'square',.045),70); }
     function playMiss(){ playTone(230,.08,'square',.035); }
-    function playChange(){ playTone(400,.10,'square',.09); setTimeout(()=>playTone(900,.12,'sawtooth',.08),80); setTimeout(()=>playTone(1200,.10,'triangle',.07),160); }
+    function playChange(){
+      // Aviso largo y muy distintivo de cambio de instrucción:
+      // patrón ascendente tipo alarma arcade.
+      playTone(520, 0.16, 'square', 0.72);
+      setTimeout(() => playTone(780, 0.16, 'square', 0.72), 120);
+      setTimeout(() => playTone(1040, 0.18, 'sawtooth', 0.70), 240);
+      setTimeout(() => playTone(1320, 0.22, 'triangle', 0.68), 380);
+    }
 
     function createBalls(){
       balls = [];
