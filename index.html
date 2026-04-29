@@ -266,7 +266,7 @@
       if(!bgMusic) return;
 
       try{
-        bgMusic.volume = 0.06;
+        bgMusic.volume = 0.03;
         bgMusic.muted = false;
         bgMusic.currentTime = 0;
 
@@ -519,7 +519,7 @@
         if(dist<=b.r && dist<hitDistance){ hit=b; hitDistance=dist; }
       }
       if(!hit){
-        combo=0; score=Math.max(0,score-.50); showFloatingScore('-0.50',x,y,false); showFlash('bad');         playMiss(); vibrate(20); updateHud(); return;
+        combo=0; score=Math.max(0,score-.50); showFloatingScore('-0.700',x,y,false); showFlash('bad');         playMiss(); vibrate(20); updateHud(); return;
       }
       const success=isBallValidToTouch(hit);
       const precision=Math.max(0,1-hitDistance/hit.r);
