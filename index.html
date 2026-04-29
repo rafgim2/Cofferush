@@ -88,7 +88,7 @@
 <body>
   <div id="orientationBlocker">📱 Solo disponible en vertical</div>
   <canvas id="gameCanvas"></canvas>
-  <audio id="musicTrack" src="./cofferush.mp3" preload="auto" playsinline></audio>
+  <audio id="musicTrack" src="cofferush.mp3" preload="auto" playsinline></audio>
   <div class="hud">
     <div class="panel" id="targetText">COLOR</div>
     <div class="panel" id="scoreText">0.00 pts</div>
@@ -263,7 +263,7 @@
 
     function startGame(){
       initAudio();
-      startMusicNow(); startOverlay.style.display='none'; endOverlay.style.display='none';
+      startMusic(); startOverlay.style.display='none'; endOverlay.style.display='none';
       score=0; combo=0; running=true; startTime=performance.now(); lastTime=performance.now();
       resize(); createBalls(); changeTarget(); updateHud();
       cancelAnimationFrame(animationId); animationId=requestAnimationFrame(loop);
@@ -508,19 +508,7 @@
 
     window.addEventListener('resize', resize);
     canvas.addEventListener('pointerdown', handlePointerDown, { passive:false });
-
-    const startButton = document.getElementById('startButton');
-    let startPressed = false;
-
-    function startFromUserGesture(event) {
-      event.preventDefault();
-      if (startPressed) return;
-      startPressed = true;
-      startGame();
-      setTimeout(() => startPressed = false, 700);
-    }
-
-    startButton.addEventListener('pointerdown', startFromUserGesture, { passive: false });
+    document.getElementById('startButton').addEventListener('click', startGame);
     document.getElementById('restartButton').addEventListener('click', startGame);
     saveScoreButton.addEventListener('click', saveScoreToFirebase);
     playerName.addEventListener('keydown', e => { if(e.key === 'Enter') saveScoreToFirebase(); });
