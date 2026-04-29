@@ -88,7 +88,7 @@
 <body>
   <div id="orientationBlocker">📱 Solo disponible en vertical</div>
   <canvas id="gameCanvas"></canvas>
-  <audio id="musicTrack" src="cofferush.mp3" preload="auto" playsinline></audio>
+  <audio id="bgMusic" src="cofferush.mp3" preload="auto"></audio>
   <div class="hud">
     <div class="panel" id="targetText">COLOR</div>
     <div class="panel" id="scoreText">0.00 pts</div>
@@ -142,7 +142,7 @@
     const saveScoreButton = document.getElementById('saveScoreButton');
     const debugBox = document.getElementById('debugBox');
     const flash = document.getElementById('flash');
-    const musicTrack = document.getElementById('musicTrack');
+    const bgMusic = document.getElementById('bgMusic');
 
     const GAME_SECONDS = 30;
     const MIN_VALID_BALLS = 3;
@@ -262,8 +262,7 @@
     }
 
     function startGame(){
-      initAudio();
-      startMusic(); startOverlay.style.display='none'; endOverlay.style.display='none';
+      initAudio(); startOverlay.style.display='none'; endOverlay.style.display='none';
       score=0; combo=0; running=true; startTime=performance.now(); lastTime=performance.now();
       resize(); createBalls(); changeTarget(); updateHud();
       cancelAnimationFrame(animationId); animationId=requestAnimationFrame(loop);
