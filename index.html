@@ -36,6 +36,51 @@
     .rankScore { color:#ffd66b; }
     .debugBox { margin-top:12px; padding:10px 12px; border-radius:14px; background:rgba(0,0,0,.32); border:1px solid rgba(255,255,255,.14); color:#ffd66b; font-size:13px; line-height:1.35; text-align:left; word-break:break-word; display:none; }
 
+
+    .startStack {
+      width: min(520px, 94vw);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .startStack .card {
+      width: 100%;
+    }
+
+    .homeRankingCard {
+      width: 100%;
+      padding: 16px;
+      border-radius: 22px;
+      background: rgba(0,0,0,.24);
+      border: 1px solid rgba(255,255,255,.14);
+      box-shadow: 0 18px 50px rgba(0,0,0,.25);
+    }
+
+    .homeRankingTitle {
+      margin: 0 0 10px;
+      font-size: 16px;
+      font-weight: 900;
+      color: #ffd66b;
+      opacity: .95;
+    }
+
+    .homeRankingList {
+      max-height: 26vh;
+      overflow-y: auto;
+      text-align: left;
+      border-radius: 16px;
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+
+    .homeRankingList .rankRow {
+      font-size: 14px;
+      padding: 9px 11px;
+      grid-template-columns: 42px 1fr auto;
+    }
+
     @media (max-width: 520px) {
       .overlay {
         padding-left: max(14px, env(safe-area-inset-left));
@@ -46,6 +91,10 @@
         max-width: none;
         width: calc(100vw - 28px);
         padding: 24px 18px;
+      }
+
+      .startStack {
+        width: calc(100vw - 28px);
       }
 
       .hud {
@@ -96,14 +145,23 @@
   </div>
   <div id="flash" class="flash"></div>
   <div id="startOverlay" class="overlay">
-    <div class="card">
-      <h1>☕ Coffee Rush</h1>
-      <p>Toca solo los círculos que cumplan la instrucción.</p>
-      <p>Ojo: a veces será <b>NO toques</b>, y el texto saldrá en color engañoso.</p>
-      <p>Centro perfecto = 1.00 punto.</p>
-      <button id="startButton">Empezar</button>
-      <p id="attemptsInfo" class="small">3 intentos al día.</p>
-      <p class="small">30 segundos. Juega mientras se prepara el café. 3 intentos al día. Ranking diario.</p>
+    <div class="startStack">
+      <div class="card">
+        <h1>☕ Coffee Rush</h1>
+        <p>Toca solo los círculos que cumplan la instrucción.</p>
+        <p>Ojo: a veces será <b>NO toques</b>, y el texto saldrá en color engañoso.</p>
+        <p>Centro perfecto = 1.00 punto.</p>
+        <button id="startButton">Empezar</button>
+        <p id="attemptsInfo" class="small">3 intentos al día.</p>
+        <p class="small">30 segundos. Juega y compite mientras se prepara el café. 3 intentos al día. Ranking diario.</p>
+      </div>
+
+      <div class="homeRankingCard">
+        <p class="homeRankingTitle">🏆 Clasificación de hoy</p>
+        <div id="homeRankingList" class="homeRankingList">
+          <div class="rankRow"><span>…</span><span class="rankName">Cargando ranking</span><span></span></div>
+        </div>
+      </div>
     </div>
   </div>
   <div id="endOverlay" class="overlay" style="display:none;">
@@ -142,6 +200,7 @@
     const nameBox = document.getElementById('nameBox');
     const rankingBox = document.getElementById('rankingBox');
     const rankingList = document.getElementById('rankingList');
+    const homeRankingList = document.getElementById('homeRankingList');
     const attemptsInfoEnd = document.getElementById('attemptsInfoEnd');
     const restartButton = document.getElementById('restartButton');
     const playerName = document.getElementById('playerName');
@@ -510,6 +569,7 @@
 
         showDebug('Guardado. Cargando ranking...');
         await showTodayRanking(name, finalScoreValue);
+        refreshHomeRanking();
       }catch(err){
         console.error(err);
         saveScoreButton.disabled=false;
@@ -560,6 +620,30 @@
         const current = item.name===currentName && Math.abs(Number(item.score)-Number(currentScore))<0.001;
         return '<div class="rankRow" style="'+(current?'background:rgba(255,214,107,.16);':'')+'"><span>'+medal+'</span><span class="rankName">'+escapeHtml(item.name)+'</span><span class="rankScore">'+Number(item.score).toFixed(2)+'</span></div>';
       }).join('');
+    }
+
+    async function refreshHomeRanking(){
+      if(!homeRankingList) return;
+
+      try{
+        homeRankingList.innerHTML = '<div class="rankRow"><span>…</span><span class="rankName">Cargando ranking</span><span></span></div>';
+
+        const scores = await loadTodayScores();
+
+        if(!scores.length){
+          homeRankingList.innerHTML = '<div class="rankRow"><span>—</span><span class="rankName">Aún no hay puntuaciones hoy</span><span></span></div>';
+          return;
+        }
+
+        homeRankingList.innerHTML = scores.slice(0, 10).map((item,index)=>{
+          const pos=index+1;
+          const medal=pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':'#'+pos;
+          return '<div class="rankRow"><span>'+medal+'</span><span class="rankName">'+escapeHtml(item.name)+'</span><span class="rankScore">'+Number(item.score).toFixed(2)+'</span></div>';
+        }).join('');
+      }catch(err){
+        console.error(err);
+        homeRankingList.innerHTML = '<div class="rankRow"><span>⚠️</span><span class="rankName">No se pudo cargar el ranking</span><span></span></div>';
+      }
     }
 
     function updateHud(){ scoreText.textContent=score.toFixed(2)+' pts'; const elapsed=(performance.now()-startTime)/1000; timeText.textContent=Math.max(0,Math.ceil(GAME_SECONDS-elapsed))+'s'; }
@@ -641,6 +725,7 @@
         endOverlay.style.display='none';
         startOverlay.style.display='grid';
         updateAttemptsUI();
+        refreshHomeRanking();
         playFail();
         return;
       }
@@ -648,7 +733,7 @@
     });
     saveScoreButton.addEventListener('click', saveScoreToFirebase);
     playerName.addEventListener('keydown', e => { if(e.key === 'Enter') saveScoreToFirebase(); });
-    updateAttemptsUI(); resize(); drawBackground();
+    updateAttemptsUI(); refreshHomeRanking(); resize(); drawBackground();
   </script>
 </body>
 </html>
