@@ -88,9 +88,7 @@
 <body>
   <div id="orientationBlocker">📱 Solo disponible en vertical</div>
   <canvas id="gameCanvas"></canvas>
-  <audio id="bgMusic" preload="auto" playsinline>
-    <source src="./cofferush.mp3" type="audio/mpeg">
-  </audio>
+  <audio id="bgMusic" src="cofferush.mp3" preload="auto" playsinline></audio>
   <div class="hud">
     <div class="panel" id="targetText">COLOR</div>
     <div class="panel" id="scoreText">0.00 pts</div>
@@ -264,17 +262,21 @@
     }
 
 
+    let backupMusic = null;
+
     function startMusic(){
-      if(!bgMusic) return;
-
       try{
-        bgMusic.pause();
-        bgMusic.currentTime = 0;
-        bgMusic.volume = 0.75;
-        bgMusic.muted = false;
-        bgMusic.load();
+        const music = bgMusic || backupMusic || new Audio('cofferush.mp3');
+        backupMusic = music;
 
-        const p = bgMusic.play();
+        music.pause();
+        music.currentTime = 0;
+        music.volume = 0.75;
+        music.muted = false;
+        music.loop = false;
+
+        // IMPORTANTÍSIMO: no usar load() aquí. En móvil puede romper el gesto de usuario.
+        const p = music.play();
         if(p && typeof p.catch === 'function'){
           p.catch(err => {
             console.warn('No se pudo reproducir cofferush.mp3:', err);
@@ -286,12 +288,13 @@
     }
 
     function stopMusic(){
-      if(!bgMusic) return;
-
       try{
-        bgMusic.pause();
-        bgMusic.currentTime = 0;
+        if(bgMusic){ bgMusic.pause(); bgMusic.currentTime = 0; }
+        if(backupMusic){ backupMusic.pause(); backupMusic.currentTime = 0; }
       }catch(err){
+        console.warn('Error parando música:', err);
+      }
+    }catch(err){
         console.warn('Error parando música:', err);
       }
     }
@@ -551,8 +554,8 @@
 
     window.addEventListener('resize', resize);
     canvas.addEventListener('pointerdown', handlePointerDown, { passive:false });
-    document.getElementById('startButton').addEventListener('pointerdown', startGame, { passive:true });
-    document.getElementById('restartButton').addEventListener('pointerdown', startGame, { passive:true });
+    document.getElementById('startButton').addEventListener('click', startGame);
+    document.getElementById('restartButton').addEventListener('click', startGame);
     saveScoreButton.addEventListener('click', saveScoreToFirebase);
     playerName.addEventListener('keydown', e => { if(e.key === 'Enter') saveScoreToFirebase(); });
     resize(); drawBackground();
