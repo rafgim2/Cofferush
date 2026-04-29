@@ -281,6 +281,14 @@
       }
     }
 
+    
+    function duckMusic(){
+      if(!bgMusic) return;
+      const original = bgMusic.volume;
+      bgMusic.volume = 0.1;
+      setTimeout(()=>{ bgMusic.volume = original; }, 120);
+    }
+
     function stopMusic(){
       if(!bgMusic) return;
 
@@ -370,6 +378,7 @@
       if(!name){
         playerName.placeholder='Escribe un nombre';
         playerName.focus();
+        duckMusic();
         playFail();
         vibrate(35);
         return;
@@ -430,6 +439,7 @@
         finalRank.textContent='No se ha podido guardar.';
         rankingBox.style.display='block';
         rankingList.innerHTML='<div class="rankRow"><span>⚠️</span><span class="rankName">'+escapeHtml(err.message || String(err))+'</span><span></span></div>';
+        duckMusic();
         playFail();
       }
     }
@@ -519,17 +529,20 @@
         if(dist<=b.r && dist<hitDistance){ hit=b; hitDistance=dist; }
       }
       if(!hit){
-        combo=0; score=Math.max(0,score-.50); showFloatingScore('-0.50',x,y,false); showFlash('bad'); playMiss(); vibrate(20); updateHud(); return;
+        combo=0; score=Math.max(0,score-.50); showFloatingScore('-0.50',x,y,false); showFlash('bad'); duckMusic();
+        playMiss(); vibrate(20); updateHud(); return;
       }
       const success=isBallValidToTouch(hit);
       const precision=Math.max(0,1-hitDistance/hit.r);
       const precisionPoints=Number(precision.toFixed(2));
       if(success){
         combo++; const comboBonus=Math.floor(combo/6)*.10; const gained=Math.min(1.5, precisionPoints+comboBonus);
-        score+=gained; showFloatingScore('+'+gained.toFixed(2),x,y,true); showFlash('good'); playSuccess(precision); vibrate(12); respawnBall(hit);
+        score+=gained; showFloatingScore('+'+gained.toFixed(2),x,y,true); showFlash('good'); duckMusic();
+        playSuccess(precision); vibrate(12); respawnBall(hit);
         if(shouldChangeInstructionBecauseNoTargets()) changeTarget(); else ensureEnoughValidBalls();
       } else {
-        combo=0; const penalty=1.00; score=Math.max(0,score-penalty); showFloatingScore('-'+penalty.toFixed(2),x,y,false); showFlash('bad'); playFail(); vibrate([25,30,25]); respawnBall(hit); ensureEnoughValidBalls();
+        combo=0; const penalty=1.00; score=Math.max(0,score-penalty); showFloatingScore('-'+penalty.toFixed(2),x,y,false); showFlash('bad'); duckMusic();
+        playFail(); vibrate([25,30,25]); respawnBall(hit); ensureEnoughValidBalls();
       }
       updateHud();
     }
