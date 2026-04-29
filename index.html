@@ -88,6 +88,9 @@
 <body>
   <div id="orientationBlocker">📱 Solo disponible en vertical</div>
   <canvas id="gameCanvas"></canvas>
+  <audio id="bgMusic" preload="auto" playsinline>
+    <source src="./cofferush.mp3" type="audio/mpeg">
+  </audio>
   <div class="hud">
     <div class="panel" id="targetText">COLOR</div>
     <div class="panel" id="scoreText">0.00 pts</div>
@@ -141,6 +144,7 @@
     const saveScoreButton = document.getElementById('saveScoreButton');
     const debugBox = document.getElementById('debugBox');
     const flash = document.getElementById('flash');
+    const bgMusic = document.getElementById('bgMusic');
 
     const GAME_SECONDS = 30;
     const MIN_VALID_BALLS = 3;
@@ -259,13 +263,48 @@
       const el=document.createElement('div'); el.className='floatScore'; el.textContent=text; el.style.left=x+'px'; el.style.top=y+'px'; el.style.color=good?'#83ffb5':'#ff7373'; document.body.appendChild(el); setTimeout(()=>el.remove(),600);
     }
 
+
+    function startMusic(){
+      if(!bgMusic) return;
+
+      try{
+        bgMusic.pause();
+        bgMusic.currentTime = 0;
+        bgMusic.volume = 0.75;
+        bgMusic.muted = false;
+        bgMusic.load();
+
+        const p = bgMusic.play();
+        if(p && typeof p.catch === 'function'){
+          p.catch(err => {
+            console.warn('No se pudo reproducir cofferush.mp3:', err);
+          });
+        }
+      }catch(err){
+        console.warn('Error iniciando música:', err);
+      }
+    }
+
+    function stopMusic(){
+      if(!bgMusic) return;
+
+      try{
+        bgMusic.pause();
+        bgMusic.currentTime = 0;
+      }catch(err){
+        console.warn('Error parando música:', err);
+      }
+    }
+
     function startGame(){
+      startMusic();
       initAudio(); startOverlay.style.display='none'; endOverlay.style.display='none';
       score=0; combo=0; running=true; startTime=performance.now(); lastTime=performance.now();
       resize(); createBalls(); changeTarget(); updateHud();
       cancelAnimationFrame(animationId); animationId=requestAnimationFrame(loop);
     }
     function endGame(){
+      stopMusic();
       running=false; cancelAnimationFrame(animationId);
       finalScore.textContent='Has hecho '+score.toFixed(2)+' puntos.';
       nameBox.style.display='block';
@@ -503,10 +542,17 @@
       b.r=r; b.mass=r*r; b.x=random(r,width-r); b.y=random(110+r,height-r); b.vx=Math.cos(angle)*speed; b.vy=Math.sin(angle)*speed; b.color=pick(COLORS); b.pulse=random(0,Math.PI*2); separateOverlaps();
     }
 
+
+    if(bgMusic){
+      bgMusic.addEventListener('error', () => {
+        console.warn('No se ha podido cargar cofferush.mp3. Comprueba que está en la misma carpeta, con ese nombre exacto y subido al servidor.');
+      });
+    }
+
     window.addEventListener('resize', resize);
     canvas.addEventListener('pointerdown', handlePointerDown, { passive:false });
-    document.getElementById('startButton').addEventListener('click', startGame);
-    document.getElementById('restartButton').addEventListener('click', startGame);
+    document.getElementById('startButton').addEventListener('pointerdown', startGame, { passive:true });
+    document.getElementById('restartButton').addEventListener('pointerdown', startGame, { passive:true });
     saveScoreButton.addEventListener('click', saveScoreToFirebase);
     playerName.addEventListener('keydown', e => { if(e.key === 'Enter') saveScoreToFirebase(); });
     resize(); drawBackground();
