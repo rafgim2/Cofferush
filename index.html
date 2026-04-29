@@ -88,7 +88,7 @@
 <body>
   <div id="orientationBlocker">📱 Solo disponible en vertical</div>
   <canvas id="gameCanvas"></canvas>
-  <audio id="bgMusic" src="cofferush.mp3" preload="auto" playsinline></audio>
+  <audio id="bgMusic" src="./cofferush.mp3" preload="auto" playsinline></audio>
   <div class="hud">
     <div class="panel" id="targetText">COLOR</div>
     <div class="panel" id="scoreText">0.00 pts</div>
@@ -262,24 +262,18 @@
     }
 
 
-    let backupMusic = null;
-
     function startMusic(){
+      if(!bgMusic) return;
+
       try{
-        const music = bgMusic || backupMusic || new Audio('cofferush.mp3');
-        backupMusic = music;
+        bgMusic.volume = 0.75;
+        bgMusic.muted = false;
+        bgMusic.currentTime = 0;
 
-        music.pause();
-        music.currentTime = 0;
-        music.volume = 0.75;
-        music.muted = false;
-        music.loop = false;
-
-        // IMPORTANTÍSIMO: no usar load() aquí. En móvil puede romper el gesto de usuario.
-        const p = music.play();
-        if(p && typeof p.catch === 'function'){
-          p.catch(err => {
-            console.warn('No se pudo reproducir cofferush.mp3:', err);
+        const promise = bgMusic.play();
+        if(promise && typeof promise.catch === 'function'){
+          promise.catch(err => {
+            console.warn('Música bloqueada o archivo no encontrado:', err);
           });
         }
       }catch(err){
@@ -288,13 +282,12 @@
     }
 
     function stopMusic(){
+      if(!bgMusic) return;
+
       try{
-        if(bgMusic){ bgMusic.pause(); bgMusic.currentTime = 0; }
-        if(backupMusic){ backupMusic.pause(); backupMusic.currentTime = 0; }
+        bgMusic.pause();
+        bgMusic.currentTime = 0;
       }catch(err){
-        console.warn('Error parando música:', err);
-      }
-    }catch(err){
         console.warn('Error parando música:', err);
       }
     }
@@ -545,10 +538,9 @@
       b.r=r; b.mass=r*r; b.x=random(r,width-r); b.y=random(110+r,height-r); b.vx=Math.cos(angle)*speed; b.vy=Math.sin(angle)*speed; b.color=pick(COLORS); b.pulse=random(0,Math.PI*2); separateOverlaps();
     }
 
-
     if(bgMusic){
       bgMusic.addEventListener('error', () => {
-        console.warn('No se ha podido cargar cofferush.mp3. Comprueba que está en la misma carpeta, con ese nombre exacto y subido al servidor.');
+        console.warn('No se pudo cargar ./cofferush.mp3. Debe estar en la misma carpeta que el HTML.');
       });
     }
 
