@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Coffee Rush</title>
+  <style>
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+    html, body { margin:0; width:100%; height:100%; overflow:hidden; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:radial-gradient(circle at top,#3b2418,#130b07 70%); color:white; touch-action:none; }
+    #gameCanvas { position:fixed; inset:0; width:100vw; height:100vh; display:block; }
+    .hud { position:fixed; top:env(safe-area-inset-top,0px); left:0; width:100%; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px; z-index:10; pointer-events:none; }
+    .panel { background:rgba(0,0,0,.38); border:1px solid rgba(255,255,255,.18); backdrop-filter:blur(10px); border-radius:18px; padding:10px 14px; box-shadow:0 10px 30px rgba(0,0,0,.25); transform-origin:center; }
+    #targetText { font-size:clamp(17px,4.7vw,31px); font-weight:950; text-transform:uppercase; letter-spacing:.5px; transition:transform .18s ease, background-color .18s ease, box-shadow .18s ease; }
+    #targetText.change { transform:scale(1.18); background:rgba(255,255,255,.16); box-shadow:0 0 28px rgba(255,255,255,.25); }
+    #scoreText,#timeText { font-size:clamp(15px,3.8vw,23px); font-weight:850; white-space:nowrap; }
+    .overlay { position:fixed; inset:0; z-index:20; display:grid; place-items:center; padding:24px; background:radial-gradient(circle at top,rgba(88,48,22,.95),rgba(10,5,3,.96)); text-align:center; }
+    .card { width:min(520px,94vw); padding:28px; border-radius:28px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); box-shadow:0 25px 80px rgba(0,0,0,.35); }
+    h1 { margin:0 0 8px; font-size:clamp(34px,9vw,58px); line-height:1; }
+    p { margin:10px 0; font-size:clamp(17px,4.5vw,22px); opacity:.92; }
+    button { margin-top:22px; width:100%; border:none; border-radius:22px; padding:18px 22px; font-size:22px; font-weight:900; color:#211008; background:linear-gradient(135deg,#ffd66b,#ff9e2c); box-shadow:0 12px 34px rgba(255,158,44,.32); cursor:pointer; }
+    button:active { transform:scale(.98); }
+    .small { font-size:14px; opacity:.72; }
+    .flash { position:fixed; inset:0; pointer-events:none; z-index:15; opacity:0; transition:opacity .12s ease; }
+    .flash.good { background:rgba(80,255,160,.18); }
+    .flash.bad { background:rgba(255,60,60,.22); }
+    .flash.change { background:rgba(255,255,255,.13); }
+    .flash.show { opacity:1; }
+    .floatScore { position:fixed; z-index:30; pointer-events:none; font-weight:950; font-size:24px; transform:translate(-50%,-50%); animation:floatUp .55s ease-out forwards; text-shadow:0 3px 10px rgba(0,0,0,.55); }
+    input { width:100%; margin-top:14px; border:1px solid rgba(255,255,255,.25); border-radius:18px; padding:16px 18px; font-size:20px; font-weight:800; color:white; background:rgba(0,0,0,.28); outline:none; text-align:center; }
+    input::placeholder { color:rgba(255,255,255,.55); }
+    .rankingList { margin-top:18px; max-height:42vh; overflow-y:auto; text-align:left; border-radius:18px; background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.12); }
+    .rankRow { display:grid; grid-template-columns:46px 1fr auto; gap:10px; align-items:center; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.09); font-size:17px; font-weight:800; }
+    .rankRow:last-child { border-bottom:none; }
+    .rankName { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+    .rankScore { color:#ffd66b; }
+    .debugBox { margin-top:12px; padding:10px 12px; border-radius:14px; background:rgba(0,0,0,.32); border:1px solid rgba(255,255,255,.14); color:#ffd66b; font-size:13px; line-height:1.35; text-align:left; word-break:break-word; display:none; }
+    @keyframes floatUp { from { opacity:1; transform:translate(-50%,-50%) scale(1); } to { opacity:0; transform:translate(-50%,-110%) scale(1.25); } }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div class="hud">
+    <div class="panel" id="targetText">COLOR</div>
+    <div class="panel" id="scoreText">0.00 pts</div>
+    <div class="panel" id="timeText">30s</div>
+  </div>
+  <div id="flash" class="flash"></div>
+  <div id="startOverlay" class="overlay">
+    <div class="card">
+      <h1>☕ Coffee Rush</h1>
+      <p>Toca solo los círculos que cumplan la instrucción.</p>
+      <p>Ojo: a veces será <b>NO toques</b>, y el texto saldrá en color engañoso.</p>
+      <p>Centro perfecto = 1.00 punto.</p>
+      <button id="startButton">Empezar</button>
+      <p class="small">Dura solo 30 segundos. ¡Juega mientras se prepara el café!.</p>
+    </div>
+  </div>
+  <div id="endOverlay" class="overlay" style="display:none;">
+    <div class="card">
+      <h1>Fin ☕</h1>
+      <p id="finalScore">Has hecho 0.00 puntos.</p>
+
+      <div id="nameBox">
+        <p>Escribe tu nombre para guardar la puntuación de hoy:</p>
+        <input id="playerName" maxlength="18" placeholder="Tu nombre" autocomplete="off" />
+        <button id="saveScoreButton">Guardar puntuación</button>
+        <div id="debugBox" class="debugBox"></div>
+      </div>
+
+      <div id="rankingBox" style="display:none;">
+        <p id="finalRank" class="small">Ranking diario</p>
+        <div id="rankingList" class="rankingList"></div>
+        <button id="restartButton">Jugar otra vez</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const targetText = document.getElementById('targetText');
+    const scoreText = document.getElementById('scoreText');
+    const timeText = document.getElementById('timeText');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const finalScore = document.getElementById('finalScore');
+    const finalRank = document.getElementById('finalRank');
+    const nameBox = document.getElementById('nameBox');
+    const rankingBox = document.getElementById('rankingBox');
+    const rankingList = document.getElementById('rankingList');
+    const playerName = document.getElementById('playerName');
+    const saveScoreButton = document.getElementById('saveScoreButton');
+    const debugBox = document.getElementById('debugBox');
+    const flash = document.getElementById('flash');
+
+    const GAME_SECONDS = 30;
+    const MIN_VALID_BALLS = 3;
+    const COLORS = [
+      { name:'ROJO', value:'#ff3b30' },
+      { name:'AZUL', value:'#0a84ff' },
+      { name:'VERDE', value:'#30d158' },
+      { name:'AMARILLO', value:'#ffd60a' },
+      { name:'MORADO', value:'#bf5af2' }
+    ];
+
+    let width = 0, height = 0, balls = [];
+    let targetColor = COLORS[0], avoidMode = false;
+    let score = 0, combo = 0, running = false;
+    let startTime = 0, lastTargetChange = 0, animationId = null, lastTime = 0, audioCtx = null;
+
+    function resize(){
+      const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+      width = window.innerWidth; height = window.innerHeight;
+      canvas.width = Math.floor(width * dpr); canvas.height = Math.floor(height * dpr);
+      canvas.style.width = width + 'px'; canvas.style.height = height + 'px';
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    function random(min,max){ return Math.random()*(max-min)+min; }
+    function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+    function pickDifferentColor(color){ let c; do { c = pick(COLORS); } while(c.name === color.name); return c; }
+
+    function initAudio(){ if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if(audioCtx.state === 'suspended') audioCtx.resume(); }
+    function playTone(freq,duration,type='sine',gainValue=.08){
+      if(!audioCtx) return;
+      const now = audioCtx.currentTime, osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = type; osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(.0001, now);
+      gain.gain.exponentialRampToValueAtTime(gainValue, now + .015);
+      gain.gain.exponentialRampToValueAtTime(.0001, now + duration);
+      osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + duration + .02);
+    }
+    function playSuccess(precision){ const base = 520 + precision*360; playTone(base,.09,'sine',.075); setTimeout(()=>playTone(base*1.5,.08,'triangle',.055),55); }
+    function playFail(){ playTone(150,.16,'sawtooth',.065); setTimeout(()=>playTone(105,.15,'square',.045),70); }
+    function playMiss(){ playTone(230,.08,'square',.035); }
+    function playChange(){ playTone(400,.10,'square',.09); setTimeout(()=>playTone(900,.12,'sawtooth',.08),80); setTimeout(()=>playTone(1200,.10,'triangle',.07),160); }
+
+    function createBalls(){
+      balls = [];
+      const count = Math.max(10, Math.min(18, Math.floor(width * height / 42000)));
+      for(let i=0;i<count;i++){
+        const r = random(24,42), speed = random(120,210), angle = random(0,Math.PI*2);
+        balls.push({ x:random(r,width-r), y:random(110+r,height-r), r, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, color:pick(COLORS), pulse:random(0,Math.PI*2), mass:r*r });
+      }
+      separateOverlaps();
+    }
+
+    function isBallValidToTouch(ball){
+      const isNamed = ball.color.name === targetColor.name;
+      return avoidMode ? !isNamed : isNamed;
+    }
+    function countValidBalls(){ return balls.filter(isBallValidToTouch).length; }
+    function ensureEnoughValidBalls(){
+      const valid = countValidBalls();
+      if(valid >= MIN_VALID_BALLS) return;
+      const needed = MIN_VALID_BALLS - valid;
+      const candidates = balls.slice().sort(()=>Math.random()-.5).filter(b => !isBallValidToTouch(b));
+      for(let i=0; i<needed && i<candidates.length; i++){
+        candidates[i].color = avoidMode ? pickDifferentColor(targetColor) : targetColor;
+      }
+    }
+    function shouldChangeInstructionBecauseNoTargets(){ return countValidBalls() === 0; }
+
+    function separateOverlaps(){
+      for(let pass=0; pass<4; pass++){
+        for(let i=0;i<balls.length;i++) for(let j=i+1;j<balls.length;j++){
+          const a=balls[i], b=balls[j]; let dx=b.x-a.x, dy=b.y-a.y, dist=Math.hypot(dx,dy); const minDist=a.r+b.r+2;
+          if(dist < .01){ dx=random(-1,1); dy=random(-1,1); dist=Math.hypot(dx,dy); }
+          if(dist < minDist){
+            const nx=dx/dist, ny=dy/dist, overlap=minDist-dist;
+            a.x-=nx*overlap*.5; a.y-=ny*overlap*.5; b.x+=nx*overlap*.5; b.y+=ny*overlap*.5;
+            a.x=Math.max(a.r,Math.min(width-a.r,a.x)); a.y=Math.max(86+a.r,Math.min(height-a.r,a.y));
+            b.x=Math.max(b.r,Math.min(width-b.r,b.x)); b.y=Math.max(86+b.r,Math.min(height-b.r,b.y));
+          }
+        }
+      }
+    }
+    function resolveBallCollisions(){
+      for(let i=0;i<balls.length;i++) for(let j=i+1;j<balls.length;j++){
+        const a=balls[i], b=balls[j]; let dx=b.x-a.x, dy=b.y-a.y, dist=Math.hypot(dx,dy), minDist=a.r+b.r;
+        if(dist <= .001 || dist >= minDist) continue;
+        const nx=dx/dist, ny=dy/dist, overlap=minDist-dist;
+        a.x-=nx*overlap*.5; a.y-=ny*overlap*.5; b.x+=nx*overlap*.5; b.y+=ny*overlap*.5;
+        const tx=-ny, ty=nx;
+        const dpTanA=a.vx*tx+a.vy*ty, dpTanB=b.vx*tx+b.vy*ty;
+        const dpNormA=a.vx*nx+a.vy*ny, dpNormB=b.vx*nx+b.vy*ny;
+        const mA=a.mass, mB=b.mass;
+        const newNormA=(dpNormA*(mA-mB)+2*mB*dpNormB)/(mA+mB);
+        const newNormB=(dpNormB*(mB-mA)+2*mA*dpNormA)/(mA+mB);
+        a.vx=tx*dpTanA+nx*newNormA; a.vy=ty*dpTanA+ny*newNormA;
+        b.vx=tx*dpTanB+nx*newNormB; b.vy=ty*dpTanB+ny*newNormB;
+      }
+    }
+
+    function changeTarget(){
+      targetColor = pick(COLORS);
+      avoidMode = Math.random() < .32;
+      const visualColor = pickDifferentColor(targetColor);
+      targetText.textContent = avoidMode ? 'NO toques ' + targetColor.name : 'Toca ' + targetColor.name;
+      targetText.style.color = visualColor.value;
+      ensureEnoughValidBalls();
+      playChange(); showChangeFlash();
+      targetText.classList.add('change'); setTimeout(()=>targetText.classList.remove('change'),210);
+      if(navigator.vibrate) navigator.vibrate(18);
+      lastTargetChange = performance.now();
+    }
+    function showFlash(type){ flash.className = 'flash ' + type + ' show'; setTimeout(()=>flash.className='flash '+type,90); }
+    function showChangeFlash(){ flash.className = 'flash change show'; setTimeout(()=>flash.className='flash change',120); }
+    function vibrate(ms){ if(navigator.vibrate) navigator.vibrate(ms); }
+    function showFloatingScore(text,x,y,good=true){
+      const el=document.createElement('div'); el.className='floatScore'; el.textContent=text; el.style.left=x+'px'; el.style.top=y+'px'; el.style.color=good?'#83ffb5':'#ff7373'; document.body.appendChild(el); setTimeout(()=>el.remove(),600);
+    }
+
+    function startGame(){
+      initAudio(); startOverlay.style.display='none'; endOverlay.style.display='none';
+      score=0; combo=0; running=true; startTime=performance.now(); lastTime=performance.now();
+      resize(); createBalls(); changeTarget(); updateHud();
+      cancelAnimationFrame(animationId); animationId=requestAnimationFrame(loop);
+    }
+    function endGame(){
+      running=false; cancelAnimationFrame(animationId);
+      finalScore.textContent='Has hecho '+score.toFixed(2)+' puntos.';
+      nameBox.style.display='block';
+      rankingBox.style.display='none';
+      playerName.value='';
+      saveScoreButton.disabled=false;
+      saveScoreButton.textContent='Guardar puntuación';
+      debugBox.style.display='none';
+      debugBox.textContent='';
+      endOverlay.style.display='grid';
+      setTimeout(()=>playerName.focus(),250);
+    }
+
+    const FIREBASE_PROJECT_ID = 'arm1-acbba';
+    const FIREBASE_API_KEY = 'AIzaSyD5EAMg-0p54f8bPq8SVdZ_ePg5Xso3cmg';
+    const FIRESTORE_BASE = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_PROJECT_ID + '/databases/(default)/documents';
+
+    function getTodayKey(){
+      const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+    function showDebug(msg){ debugBox.style.display='block'; debugBox.textContent=msg; }
+    function escapeHtml(text){ return String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
+
+
+    async function runNameSearch(fieldPath, value){
+      const body = {
+        structuredQuery: {
+          from: [{ collectionId: 'cafe_scores' }],
+          where: {
+            compositeFilter: {
+              op: 'AND',
+              filters: [
+                { fieldFilter: { field: { fieldPath: 'day' }, op: 'EQUAL', value: { stringValue: getTodayKey() } } },
+                { fieldFilter: { field: { fieldPath }, op: 'EQUAL', value: { stringValue: value } } }
+              ]
+            }
+          },
+          limit: 1
+        }
+      };
+
+      const res = await fetch(FIRESTORE_BASE + ':runQuery?key=' + FIREBASE_API_KEY, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const text = await res.text();
+      if(!res.ok) throw new Error('Firestore search ' + res.status + ': ' + text);
+
+      const rows = JSON.parse(text);
+      const found = rows.find(r => r.document && r.document.name);
+      return found ? found.document.name : null;
+    }
+
+    async function findTodayScoreByName(name){
+      // Primero busca por nombre normalizado. Si hay puntuaciones antiguas sin nameKey,
+      // hace una segunda búsqueda por el nombre exacto.
+      const byKey = await runNameSearch('nameKey', name.toLowerCase());
+      if(byKey) return byKey;
+      return await runNameSearch('name', name);
+    }
+
+    async function saveScoreToFirebase(){
+      const name = playerName.value.trim().slice(0,18);
+      if(!name){
+        playerName.placeholder='Escribe un nombre';
+        playerName.focus();
+        playFail();
+        vibrate(35);
+        return;
+      }
+
+      const finalScoreValue = Number(score.toFixed(2));
+      const nameKey = name.toLowerCase();
+
+      saveScoreButton.disabled=true;
+      saveScoreButton.textContent='Guardando...';
+      showDebug('Buscando si ese nombre ya existe hoy...');
+
+      try{
+        const existingDocPath = await findTodayScoreByName(name);
+
+        const payload = {
+          fields: {
+            name: { stringValue: name },
+            nameKey: { stringValue: nameKey },
+            score: { doubleValue: finalScoreValue },
+            day: { stringValue: getTodayKey() },
+            updatedAt: { timestampValue: new Date().toISOString() }
+          }
+        };
+
+        let res;
+        let text;
+
+        if(existingDocPath){
+          showDebug('Nombre encontrado. Actualizando puntuación anterior...');
+          res = await fetch('https://firestore.googleapis.com/v1/' + existingDocPath + '?key=' + FIREBASE_API_KEY, {
+            method:'PATCH',
+            headers:{ 'Content-Type':'application/json' },
+            body: JSON.stringify(payload)
+          });
+          text = await res.text();
+          if(!res.ok) throw new Error('Firestore update ' + res.status + ': ' + text);
+        } else {
+          showDebug('Nombre nuevo. Guardando puntuación...');
+          payload.fields.createdAt = { timestampValue: new Date().toISOString() };
+
+          res = await fetch(FIRESTORE_BASE + '/cafe_scores?key=' + FIREBASE_API_KEY, {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json' },
+            body: JSON.stringify(payload)
+          });
+          text = await res.text();
+          if(!res.ok) throw new Error('Firestore write ' + res.status + ': ' + text);
+        }
+
+        showDebug('Guardado. Cargando ranking...');
+        await showTodayRanking(name, finalScoreValue);
+      }catch(err){
+        console.error(err);
+        saveScoreButton.disabled=false;
+        saveScoreButton.textContent='Reintentar';
+        showDebug('ERROR: ' + (err.message || String(err)));
+        finalRank.textContent='No se ha podido guardar.';
+        rankingBox.style.display='block';
+        rankingList.innerHTML='<div class="rankRow"><span>⚠️</span><span class="rankName">'+escapeHtml(err.message || String(err))+'</span><span></span></div>';
+        playFail();
+      }
+    }
+
+    async function loadTodayScores(){
+      const body = {
+        structuredQuery: {
+          from: [{ collectionId: 'cafe_scores' }],
+          where: { fieldFilter: { field: { fieldPath: 'day' }, op: 'EQUAL', value: { stringValue: getTodayKey() } } },
+          limit: 100
+        }
+      };
+      const res = await fetch(FIRESTORE_BASE + ':runQuery?key=' + FIREBASE_API_KEY, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify(body)
+      });
+      const text = await res.text();
+      if(!res.ok) throw new Error('Firestore read ' + res.status + ': ' + text);
+      const rows = JSON.parse(text);
+      return rows
+        .filter(r => r.document && r.document.fields)
+        .map(r => {
+          const f = r.document.fields;
+          return { name: f.name?.stringValue || 'Anónimo', score: Number(f.score?.doubleValue ?? f.score?.integerValue ?? 0), day: f.day?.stringValue || '' };
+        })
+        .sort((a,b)=>b.score-a.score);
+    }
+
+    async function showTodayRanking(currentName,currentScore){
+      nameBox.style.display='none';
+      rankingBox.style.display='block';
+      finalRank.textContent='Ranking de hoy · '+getTodayKey();
+      rankingList.innerHTML='<div class="rankRow"><span>…</span><span class="rankName">Cargando ranking</span><span></span></div>';
+      const scores = await loadTodayScores();
+      if(!scores.length){ rankingList.innerHTML='<div class="rankRow"><span>—</span><span class="rankName">Aún no hay puntuaciones</span><span></span></div>'; return; }
+      rankingList.innerHTML = scores.map((item,index)=>{
+        const pos=index+1;
+        const medal=pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':'#'+pos;
+        const current = item.name===currentName && Math.abs(Number(item.score)-Number(currentScore))<0.001;
+        return '<div class="rankRow" style="'+(current?'background:rgba(255,214,107,.16);':'')+'"><span>'+medal+'</span><span class="rankName">'+escapeHtml(item.name)+'</span><span class="rankScore">'+Number(item.score).toFixed(2)+'</span></div>';
+      }).join('');
+    }
+
+    function updateHud(){ scoreText.textContent=score.toFixed(2)+' pts'; const elapsed=(performance.now()-startTime)/1000; timeText.textContent=Math.max(0,Math.ceil(GAME_SECONDS-elapsed))+'s'; }
+
+    function drawBackground(){
+      ctx.clearRect(0,0,width,height);
+      const grad=ctx.createRadialGradient(width*.5,0,20,width*.5,height*.45,height);
+      grad.addColorStop(0,'#4a2b18'); grad.addColorStop(1,'#120805'); ctx.fillStyle=grad; ctx.fillRect(0,0,width,height);
+    }
+    function updateBalls(dt){
+      const elapsed=(performance.now()-startTime)/1000, difficulty=1+elapsed/GAME_SECONDS*.55;
+      for(const b of balls){
+        b.x+=b.vx*dt*difficulty; b.y+=b.vy*dt*difficulty; b.pulse+=dt*5;
+        if(b.x-b.r<0){ b.x=b.r; b.vx=Math.abs(b.vx); }
+        if(b.x+b.r>width){ b.x=width-b.r; b.vx=-Math.abs(b.vx); }
+        if(b.y-b.r<86){ b.y=86+b.r; b.vy=Math.abs(b.vy); }
+        if(b.y+b.r>height){ b.y=height-b.r; b.vy=-Math.abs(b.vy); }
+      }
+      resolveBallCollisions();
+    }
+    function drawBalls(){
+      for(const b of balls){
+        const shouldTouch=isBallValidToTouch(b), glow=shouldTouch?20:7, pulse=Math.sin(b.pulse)*2;
+        ctx.save(); ctx.shadowColor=b.color.value; ctx.shadowBlur=glow;
+        ctx.beginPath(); ctx.arc(b.x,b.y,b.r+pulse,0,Math.PI*2); ctx.fillStyle=b.color.value; ctx.fill();
+        ctx.globalAlpha=.28; ctx.beginPath(); ctx.arc(b.x-b.r*.28,b.y-b.r*.28,b.r*.32,0,Math.PI*2); ctx.fillStyle='#ffffff'; ctx.fill(); ctx.restore();
+      }
+    }
+    function loop(now){
+      if(!running) return;
+      const dt=Math.min(.033,(now-lastTime)/1000 || .016); lastTime=now;
+      const elapsed=(now-startTime)/1000;
+      if(elapsed >= GAME_SECONDS){ endGame(); return; }
+      const changeInterval = elapsed > 20 ? 3000 : 4200;
+      if(now-lastTargetChange > changeInterval || shouldChangeInstructionBecauseNoTargets()) changeTarget(); else ensureEnoughValidBalls();
+      updateBalls(dt); drawBackground(); drawBalls(); updateHud(); animationId=requestAnimationFrame(loop);
+    }
+
+    function handlePointerDown(event){
+      if(!running) return; event.preventDefault();
+      const rect=canvas.getBoundingClientRect(), x=event.clientX-rect.left, y=event.clientY-rect.top;
+      let hit=null, hitDistance=Infinity;
+      for(let i=balls.length-1;i>=0;i--){
+        const b=balls[i], dx=x-b.x, dy=y-b.y, dist=Math.hypot(dx,dy);
+        if(dist<=b.r && dist<hitDistance){ hit=b; hitDistance=dist; }
+      }
+      if(!hit){
+        combo=0; score=Math.max(0,score-.50); showFloatingScore('-0.50',x,y,false); showFlash('bad'); playMiss(); vibrate(20); updateHud(); return;
+      }
+      const success=isBallValidToTouch(hit);
+      const precision=Math.max(0,1-hitDistance/hit.r);
+      const precisionPoints=Number(precision.toFixed(2));
+      if(success){
+        combo++; const comboBonus=Math.floor(combo/6)*.10; const gained=Math.min(1.5, precisionPoints+comboBonus);
+        score+=gained; showFloatingScore('+'+gained.toFixed(2),x,y,true); showFlash('good'); playSuccess(precision); vibrate(12); respawnBall(hit);
+        if(shouldChangeInstructionBecauseNoTargets()) changeTarget(); else ensureEnoughValidBalls();
+      } else {
+        combo=0; const penalty=1.00; score=Math.max(0,score-penalty); showFloatingScore('-'+penalty.toFixed(2),x,y,false); showFlash('bad'); playFail(); vibrate([25,30,25]); respawnBall(hit); ensureEnoughValidBalls();
+      }
+      updateHud();
+    }
+    function respawnBall(b){
+      const r=random(22,40), speed=random(130,230), angle=random(0,Math.PI*2);
+      b.r=r; b.mass=r*r; b.x=random(r,width-r); b.y=random(110+r,height-r); b.vx=Math.cos(angle)*speed; b.vy=Math.sin(angle)*speed; b.color=pick(COLORS); b.pulse=random(0,Math.PI*2); separateOverlaps();
+    }
+
+    window.addEventListener('resize', resize);
+    canvas.addEventListener('pointerdown', handlePointerDown, { passive:false });
+    document.getElementById('startButton').addEventListener('click', startGame);
+    document.getElementById('restartButton').addEventListener('click', startGame);
+    saveScoreButton.addEventListener('click', saveScoreToFirebase);
+    playerName.addEventListener('keydown', e => { if(e.key === 'Enter') saveScoreToFirebase(); });
+    resize(); drawBackground();
+  </script>
+</body>
+</html>
