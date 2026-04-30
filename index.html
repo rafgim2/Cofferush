@@ -655,7 +655,6 @@
     async function showTodayRanking(currentName,currentScore){
       rankingBox.style.display='block';
       finalRank.textContent='Ranking de hoy · '+getTodayKey();
-      rankingList.innerHTML='<div class="rankRow"><span>…</span><span class="rankName">Cargando ranking</span><span></span></div>';
       const scores = await loadTodayScores();
       if(!scores.length){ rankingList.innerHTML='<div class="rankRow"><span>—</span><span class="rankName">Aún no hay puntuaciones</span><span></span></div>'; return; }
       rankingList.innerHTML = scores.map((item,index)=>{
